@@ -50,14 +50,15 @@ public class McpController {
                 Map<String, Object> args = (Map<String, Object>) params.getOrDefault("arguments", Map.of());
                 try {
                     Object result = mcpService.callTool(toolName, args);
-                    yield ok(id, Map.of("content", List.of(
-                        Map.of("type", "text", "text", mapper.writeValueAsString(result))
-                    )));
+                    Map<String, Object> content = new java.util.HashMap<>();
+                    content.put("type", "text");
+                    content.put("text", mapper.writeValueAsString(result));
+                    yield ok(id, java.util.Map.of("content", List.of(content)));
                 } catch (Exception e) {
-                    yield ResponseEntity.ok(Map.of(
-                        "jsonrpc", "2.0", "id", id,
-                        "error", Map.of("code", -32000, "message", e.getMessage())
-                    ));
+                    java.util.Map<String, Object> err = new java.util.HashMap<>();
+                    err.put("jsonrpc", "2.0"); err.put("id", id);
+                    err.put("error", java.util.Map.of("code", -32000, "message", e.getMessage()));
+                    yield ResponseEntity.ok(err);
                 }
             }
             default -> ResponseEntity.ok(Map.of(
