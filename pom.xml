@@ -42,7 +42,12 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
-        </dependencies>
+        
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+    </dependency>
+  </dependencies>
     </dependencyManagement>
 
     <dependencies>
@@ -396,6 +401,16 @@
                     </dependency>
                 </dependencies>
             </plugin>
-        </plugins>
+        
+            <plugin>
+              <groupId>com.google.cloud.tools</groupId>
+              <artifactId>jib-maven-plugin</artifactId>
+              <version>3.4.2</version>
+              <configuration>
+                <to><image>${JIB_IMAGE}</image></to>
+                <container><ports><port>8080</port></ports></container>
+              </configuration>
+            </plugin>
+            </plugins>
     </build>
 </project>
