@@ -32,6 +32,7 @@ public class WebSecurityConfig {
             "/registration-success"
         };
         http.securityMatcher("/**");
+        http.csrf(csrf -> csrf.ignoringRequestMatchers("/mcp", "/mcp/**"));
 
         http.authorizeHttpRequests(r -> r.requestMatchers(publicPaths)
                 .permitAll()
