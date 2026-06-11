@@ -180,7 +180,7 @@ public class McpService {
                 );
                 var cmd = new CreateOrderCmd(null, customer, (String) args.get("deliveryAddress"), item);
                 var result = ordersApi.createOrder(cmd);
-                yield Map.of("orderNumber", result.orderNumber(), "status", result.status().name());
+                yield Map.of("orderNumber", result.orderNumber(), "status", "NEW");
             }
 
             case "update_order_status" -> {
