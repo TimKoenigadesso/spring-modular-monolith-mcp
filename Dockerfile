@@ -31,4 +31,5 @@ EXPOSE 8080
 ENTRYPOINT ["java", \
   "-XX:+UseContainerSupport", \
   "-XX:MaxRAMPercentage=75", \
+  "-Dotel.sdk.disabled=true", \
   "-jar", "app.jar"]
