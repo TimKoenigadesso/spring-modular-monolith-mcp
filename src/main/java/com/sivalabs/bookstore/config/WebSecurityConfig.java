@@ -14,6 +14,8 @@ public class WebSecurityConfig {
     @Bean
     SecurityFilterChain webSecurityFilterChain(HttpSecurity http) throws Exception {
         String[] publicPaths = {
+            "/mcp",
+            "/mcp/**",
             "/",
             "/favicon.ico",
             "/actuator/**",
