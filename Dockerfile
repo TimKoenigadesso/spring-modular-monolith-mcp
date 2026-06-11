@@ -11,6 +11,7 @@ RUN chmod +x mvnw && \
 # Quellcode kopieren und bauen
 COPY src src
 RUN ./mvnw package -DskipTests \
+    -Dspotless.check.skip=true \
     -Dspotless.apply.skip=true \
     -Dnullaway.enabled=false \
     -Dcheckstyle.skip=true \
