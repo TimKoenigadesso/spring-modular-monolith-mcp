@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+
+<body>
+<div layout:fragment="content">
+    <div class="orders-page">
+        <div class="orders-page-header">
+            <h2 class="orders-page-heading">My Orders</h2>
+            <a th:href="@{/}" class="btn btn-outline-primary btn-sm">Continue Shopping</a>
+        </div>
+
+        <div class="orders-card">
+            <table class="table orders-table mb-0">
+                <thead>
+                <tr>
+                    <th>Order ID</th>
+                    <th>Status</th>
+                    <th class="text-end">Details</th>
+                </tr>
+                </thead>
+                <tbody>
+                    <th:block th:insert="~{partials/orders}"/>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</body>
+</html>

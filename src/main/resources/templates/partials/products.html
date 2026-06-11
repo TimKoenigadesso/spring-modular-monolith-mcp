@@ -1,0 +1,27 @@
+<div id="products" th:fragment="products" xmlns:hx="http://www.w3.org/1999/xhtml">
+    <div th:replace="~{partials/pagination :: pagination}"></div>
+    <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-xl-5 g-4 my-2">
+        <div class="col" th:each="product : ${productsPage.data}">
+            <div class="card product-card h-100">
+                <div class="product-img-wrapper">
+                    <img th:src="${product.imageUrl}"
+                         src="/images/books.png"
+                         alt="Product Image"
+                         class="product-img"
+                    />
+                </div>
+                <div class="card-body d-flex flex-column">
+                    <h6 class="card-title product-title"
+                        th:text="${product.getDisplayName()}">product.name</h6>
+                    <p class="product-price mt-auto mb-3"
+                       th:text="${'$' + product.price}">product.price</p>
+                    <form method="post" th:action="@{/buy}">
+                        <input type="hidden" name="code" th:value="${product.code}"/>
+                        <button class="btn btn-buy w-100" type="submit">Add to Cart</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div th:replace="~{partials/pagination :: pagination}"></div>
+</div>

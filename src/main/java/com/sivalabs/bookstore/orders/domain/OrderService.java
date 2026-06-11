@@ -1,0 +1,90 @@
+package com.sivalabs.bookstore.orders.domain;
+
+import com.sivalabs.bookstore.common.models.PagedResult;
+import com.sivalabs.bookstore.orders.domain.models.*;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.List;
+import java.util.Optional;
+import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+public class OrderService {
+    private static final Logger log = LoggerFactory.getLogger(OrderService.class);
+    private static final int ORDER_PAGE_SIZE = 10;
+
+    private final OrderRepository orderRepository;
+    private final ApplicationEventPublisher eventPublisher;
+
+    OrderService(OrderRepository orderRepository, ApplicationEventPublisher publisher) {
+        this.orderRepository = orderRepository;
+        this.eventPublisher = publisher;
+    }
+
+    @Transactional
+    public CreateOrderResult createOrder(CreateOrderCmd cmd) {
+        OrderEntity orderEntity = OrderMapper.convertToEntity(cmd);
+        OrderEntity savedOrder = orderRepository.save(orderEntity);
+        log.info("Created Order with orderNumber={}", savedOrder.getOrderNumber());
+        OrderCreatedEvent event = new OrderCreatedEvent(
+                savedOrder.getOrderNumber(),
+                savedOrder.getOrderItem().code(),
+                savedOrder.getOrderItem().quantity(),
+                savedOrder.getCustomer());
+        eventPublisher.publishEvent(event);
+        return new CreateOrderResult(savedOrder.getOrderNumber());
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<OrderDto> findOrder(String orderNumber, Long userId) {
+        return orderRepository.findByOrderNumberAndUserId(orderNumber, userId).map(OrderMapper::convertToDto);
+    }
+
+    @Transactional(readOnly = true)
+    public List<OrderView> findOrders(Long userId) {
+        Sort sort = Sort.by("id").descending();
+        var orderEntities = orderRepository.findAllByUserId(userId, sort);
+        return OrderMapper.convertToOrderViews(orderEntities);
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<OrderDto> findOrderAdmin(String orderNumber) {
+        return orderRepository.findByOrderNumber(orderNumber).map(OrderMapper::convertToDto);
+    }
+
+    @Transactional
+    public void updateOrderStatus(String orderNumber, OrderStatus newStatus) {
+        OrderEntity entity = orderRepository
+                .findByOrderNumber(orderNumber)
+                .orElseThrow(() -> OrderNotFoundException.forOrderNumber(orderNumber));
+        if (!entity.getStatus().canTransitionTo(newStatus)) {
+            throw InvalidOrderException.invalidTransition(entity.getStatus(), newStatus);
+        }
+        entity.setStatus(newStatus);
+        entity.setUpdatedAt(LocalDateTime.now(ZoneId.systemDefault()));
+        orderRepository.save(entity);
+    }
+
+    @Transactional(readOnly = true)
+    public PagedResult<AdminOrderView> getOrdersAdmin(int pageNo, @Nullable OrderStatus status) {
+        Sort sort = Sort.by("createdAt").descending();
+        int page = pageNo <= 1 ? 0 : pageNo - 1;
+        Pageable pageable = PageRequest.of(page, ORDER_PAGE_SIZE, sort);
+        Page<AdminOrderView> ordersPage;
+        if (status != null) {
+            ordersPage = orderRepository.findAllByStatus(status, pageable).map(OrderMapper::toAdminOrderView);
+        } else {
+            ordersPage = orderRepository.findAll(pageable).map(OrderMapper::toAdminOrderView);
+        }
+        return new PagedResult<>(ordersPage);
+    }
+}

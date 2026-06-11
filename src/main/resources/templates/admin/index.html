@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{admin/layout}">
+<body>
+<div layout:fragment="content">
+    <div class="admin-page-header">
+        <div>
+            <h2 class="admin-page-title">Dashboard</h2>
+            <p class="admin-page-subtitle">Welcome to the BookStore administration area.</p>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-md-4">
+            <div class="admin-stat-card">
+                <div class="admin-stat-icon admin-stat-icon-blue">
+                    <i class="fa-solid fa-book"></i>
+                </div>
+                <h5 class="admin-stat-title">Catalog</h5>
+                <p class="admin-stat-desc">Manage products in the bookstore catalogue.</p>
+                <a th:href="@{/admin/catalog/products}" class="admin-stat-link">Manage Products &rarr;</a>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="admin-stat-card">
+                <div class="admin-stat-icon admin-stat-icon-green">
+                    <i class="fa-solid fa-clipboard-list"></i>
+                </div>
+                <h5 class="admin-stat-title">Orders</h5>
+                <p class="admin-stat-desc">View and manage customer orders.</p>
+                <a th:href="@{/admin/orders}" class="admin-stat-link">Manage Orders &rarr;</a>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="admin-stat-card">
+                <div class="admin-stat-icon admin-stat-icon-purple">
+                    <i class="fa-solid fa-boxes-stacked"></i>
+                </div>
+                <h5 class="admin-stat-title">Inventory</h5>
+                <p class="admin-stat-desc">Monitor and update product stock levels.</p>
+                <a th:href="@{/admin/inventory}" class="admin-stat-link">Manage Inventory &rarr;</a>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

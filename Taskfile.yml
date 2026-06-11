@@ -1,0 +1,101 @@
+version: '3'
+
+vars:
+  GOOS: "{{default OS .GOOS}}"
+  MVNW: '{{if eq .GOOS "windows"}}mvnw.cmd{{else}}./mvnw{{end}}'
+  SLEEP_CMD: '{{if eq .GOOS "windows"}}timeout{{else}}sleep{{end}}'
+  IMAGE_NAME: 'sivaprasadreddy/spring-modular-monolith'
+  DC_FILE: "compose.yml"
+
+tasks:
+  default:
+    cmds:
+      - task: test
+
+  test:
+    deps: [ format ]
+    cmds:
+      - "{{.MVNW}} clean verify"
+
+  format:
+    cmds:
+      - "{{.MVNW}} spotless:apply"
+
+  build_image:
+    cmds:
+      - "{{.MVNW}} clean compile spring-boot:build-image -DskipTests -DdockerImageName={{.IMAGE_NAME}}"
+
+  start:
+    deps: [ build_image ]
+    cmds:
+      - docker compose --profile app -f "{{.DC_FILE}}" up --force-recreate -d
+
+  stop:
+    cmds:
+      - docker compose --profile app -f "{{.DC_FILE}}" stop
+      - docker compose --profile app -f "{{.DC_FILE}}" rm -f
+
+  restart:
+    cmds:
+      - task: stop
+      - task: sleep
+      - task: start
+
+  # Parent task runs platform-specific subtasks. Non-matching subtasks are skipped.
+  kind_create:
+    cmds:
+      - task: kind_create_windows
+      - task: kind_create_unix
+
+  kind_create_windows:
+    platforms: [windows]
+    cmds:
+      - powershell -NoProfile -ExecutionPolicy Bypass -File ./k8s/kind/kind-cluster.ps1 create
+
+  kind_create_unix:
+    cmds:
+      - ./k8s/kind/kind-cluster.sh create
+
+  kind_create_force:
+    desc: "Create kind cluster and force hostPort mappings (no build/test)"
+    cmds:
+      - task: kind_create_force_windows
+      - task: kind_create_force_unix
+
+  kind_create_force_windows:
+    platforms: [windows]
+    cmds:
+      - powershell -NoProfile -ExecutionPolicy Bypass -File ./k8s/kind/kind-cluster.ps1 --force-hostports create
+
+  kind_create_force_unix:
+    cmds:
+      - ./k8s/kind/kind-cluster.sh --force-hostports create
+
+  kind_destroy:
+    cmds:
+      - task: kind_destroy_windows
+      - task: kind_destroy_unix
+
+  kind_destroy_windows:
+    platforms: [windows]
+    cmds:
+      - powershell -NoProfile -ExecutionPolicy Bypass -File ./k8s/kind/kind-cluster.ps1 destroy
+
+  kind_destroy_unix:
+    cmds:
+      - ./k8s/kind/kind-cluster.sh destroy
+
+  k8s_deploy:
+    cmds:
+      - kind load docker-image sivaprasadreddy/spring-modular-monolith --name sivalabs-k8s
+      - kubectl apply -f k8s/manifests/
+
+  k8s_undeploy:
+    cmds:
+      - kubectl delete -f k8s/manifests/
+
+  sleep:
+    vars:
+      DURATION: "{{default 5 .DURATION}}"
+    cmds:
+      - "{{.SLEEP_CMD}} {{.DURATION}}"

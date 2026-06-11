@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:hx="http://www.w3.org/1999/xhtml"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout">
+<head>
+    <meta charset="utf-8"/>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+    <title>BookStore</title>
+    <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport"/>
+    <link rel="stylesheet" href="/webjars/bootstrap/css/bootstrap.css">
+    <link rel="stylesheet" href="/webjars/font-awesome/css/all.css">
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+<main>
+    <nav class="sf-nav navbar fixed-top navbar-expand-lg">
+        <div class="container-xl">
+
+            <a class="sf-brand navbar-brand" th:href="@{/}">
+                <img src="/images/books.png" alt="BookStore" width="32" height="32"/>
+                BookStore
+            </a>
+
+            <button class="sf-toggler navbar-toggler" type="button"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#sfNavbar"
+                    aria-controls="sfNavbar"
+                    aria-expanded="false"
+                    aria-label="Toggle navigation">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+
+            <div class="collapse navbar-collapse" id="sfNavbar">
+                <ul class="navbar-nav ms-auto align-items-center gap-1">
+
+                    <li class="nav-item" sec:authorize="isAnonymous()">
+                        <a class="sf-link" th:href="@{/login}">
+                            <i class="fa-solid fa-right-to-bracket"></i>
+                            Sign In
+                        </a>
+                    </li>
+
+                    <li class="nav-item" sec:authorize="isAnonymous()">
+                        <a class="sf-link sf-link-register" th:href="@{/registration}">
+                            <i class="fa-solid fa-user-plus"></i>
+                            Register
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="sf-link sf-link-cart" th:href="@{/cart}">
+                            <i class="fa-solid fa-cart-shopping"></i>
+                            Cart
+                        </a>
+                    </li>
+
+                    <li class="nav-item" sec:authorize="isAuthenticated()">
+                        <a class="sf-link" th:href="@{/orders}">
+                            <i class="fa-solid fa-clipboard-list"></i>
+                            Orders
+                        </a>
+                    </li>
+
+                    <li class="nav-item" sec:authorize="hasRole('ADMIN')">
+                        <a class="sf-link sf-link-admin" th:href="@{/admin}">
+                            <i class="fa-solid fa-gear"></i>
+                            Admin
+                        </a>
+                    </li>
+
+                    <li class="nav-item" sec:authorize="isAuthenticated()">
+                        <a class="sf-link sf-link-logout" th:href="@{/logout}">
+                            <i class="fa-solid fa-right-from-bracket"></i>
+                            Logout
+                        </a>
+                    </li>
+
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div id="app" class="container-xl">
+        <div layout:fragment="content">
+            <!-- Your Page Content Here -->
+        </div>
+    </div>
+</main>
+
+<script src="/webjars/bootstrap/js/bootstrap.bundle.js"></script>
+<script src="/webjars/htmx.org/dist/htmx.min.js"></script>
+<div layout:fragment="pageScripts">
+</div>
+</body>
+</html>

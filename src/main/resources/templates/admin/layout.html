@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:hx="http://www.w3.org/1999/xhtml"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout">
+<head>
+    <meta charset="utf-8"/>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+    <title>BookStore Admin</title>
+    <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport"/>
+    <link rel="stylesheet" href="/webjars/bootstrap/css/bootstrap.css">
+    <link rel="stylesheet" href="/webjars/font-awesome/css/all.css">
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body class="admin-body">
+
+<nav class="admin-topbar">
+    <a class="admin-topbar-brand" th:href="@{/admin}">
+        <img src="/images/books.png" alt="BookStore" width="30" height="30"/>
+        BookStore <span class="admin-badge">Admin</span>
+    </a>
+    <div class="admin-topbar-actions">
+        <a class="admin-topbar-link" th:href="@{/}">
+            <i class="fa-solid fa-store"></i>
+            Storefront
+        </a>
+        <a class="admin-topbar-link" th:href="@{/logout}" sec:authorize="isAuthenticated()">
+            <i class="fa-solid fa-right-from-bracket"></i>
+            Logout
+        </a>
+    </div>
+</nav>
+
+<div class="admin-shell">
+    <aside class="admin-sidebar">
+        <nav>
+            <div class="admin-nav-section">
+                <span class="admin-nav-section-label">Catalog</span>
+                <a class="admin-nav-link"
+                   th:href="@{/admin/catalog/products}">
+                    <i class="fa-solid fa-book"></i>
+                    Products
+                </a>
+            </div>
+            <div class="admin-nav-section">
+                <span class="admin-nav-section-label">Sales</span>
+                <a class="admin-nav-link"
+                   th:href="@{/admin/orders}">
+                    <i class="fa-solid fa-clipboard-list"></i>
+                    Orders
+                </a>
+            </div>
+            <div class="admin-nav-section">
+                <span class="admin-nav-section-label">Warehouse</span>
+                <a class="admin-nav-link"
+                   th:href="@{/admin/inventory}">
+                    <i class="fa-solid fa-boxes-stacked"></i>
+                    Stock Levels
+                </a>
+            </div>
+
+            <div class="admin-nav-section">
+                <span class="admin-nav-section-label">Support</span>
+                <a class="admin-nav-link"
+                   target="_blank"
+                   th:href="@{/bootui}">
+                    <i class="fa-solid fa-display"></i>
+                    Boot UI
+                </a>
+            </div>
+        </nav>
+    </aside>
+
+    <main class="admin-content">
+        <div layout:fragment="content">
+            <!-- Admin Page Content Here -->
+        </div>
+    </main>
+</div>
+
+<script src="/webjars/bootstrap/js/bootstrap.bundle.js"></script>
+<script src="/webjars/htmx.org/dist/htmx.min.js"></script>
+<div layout:fragment="pageScripts">
+</div>
+</body>
+</html>

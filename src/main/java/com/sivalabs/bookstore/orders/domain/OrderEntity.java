@@ -1,0 +1,163 @@
+package com.sivalabs.bookstore.orders.domain;
+
+import com.sivalabs.bookstore.orders.domain.models.Customer;
+import com.sivalabs.bookstore.orders.domain.models.OrderItem;
+import com.sivalabs.bookstore.orders.domain.models.OrderStatus;
+import jakarta.persistence.AttributeOverride;
+import jakarta.persistence.AttributeOverrides;
+import jakarta.persistence.Column;
+import jakarta.persistence.Embedded;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.SequenceGenerator;
+import jakarta.persistence.Table;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import org.jspecify.annotations.Nullable;
+
+@Entity
+@Table(name = "orders", schema = "orders")
+class OrderEntity {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "order_id_generator")
+    @SequenceGenerator(name = "order_id_generator", sequenceName = "order_id_seq", schema = "orders")
+    private Long id = 0L;
+
+    @Column(nullable = false, unique = true)
+    private String orderNumber = "";
+
+    @Column(name = "user_id", nullable = false)
+    private Long userId = 0L;
+
+    @Embedded
+    @AttributeOverrides(
+            value = {
+                @AttributeOverride(name = "name", column = @Column(name = "customer_name")),
+                @AttributeOverride(name = "email", column = @Column(name = "customer_email")),
+                @AttributeOverride(name = "phone", column = @Column(name = "customer_phone"))
+            })
+    private Customer customer = new Customer("", "", "");
+
+    @Column(nullable = false)
+    private String deliveryAddress = "";
+
+    @Embedded
+    @AttributeOverrides(
+            value = {
+                @AttributeOverride(name = "code", column = @Column(name = "product_code")),
+                @AttributeOverride(name = "name", column = @Column(name = "product_name")),
+                @AttributeOverride(name = "price", column = @Column(name = "product_price")),
+                @AttributeOverride(name = "quantity", column = @Column(name = "quantity"))
+            })
+    private OrderItem orderItem = new OrderItem("", "", BigDecimal.ZERO, 1);
+
+    @Enumerated(EnumType.STRING)
+    private OrderStatus status = OrderStatus.NEW;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt = LocalDateTime.now(ZoneId.systemDefault());
+
+    @Column(name = "updated_at")
+    @Nullable private LocalDateTime updatedAt;
+
+    public OrderEntity() {}
+
+    public OrderEntity(
+            Long id,
+            String orderNumber,
+            Long userId,
+            Customer customer,
+            String deliveryAddress,
+            OrderItem orderItem,
+            OrderStatus status,
+            LocalDateTime createdAt,
+            LocalDateTime updatedAt) {
+        this.id = id;
+        this.orderNumber = orderNumber;
+        this.userId = userId;
+        this.customer = customer;
+        this.deliveryAddress = deliveryAddress;
+        this.orderItem = orderItem;
+        this.status = status;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getOrderNumber() {
+        return orderNumber;
+    }
+
+    public void setOrderNumber(String orderNumber) {
+        this.orderNumber = orderNumber;
+    }
+
+    public Long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(Long userId) {
+        this.userId = userId;
+    }
+
+    public Customer getCustomer() {
+        return customer;
+    }
+
+    public void setCustomer(Customer customer) {
+        this.customer = customer;
+    }
+
+    public String getDeliveryAddress() {
+        return deliveryAddress;
+    }
+
+    public void setDeliveryAddress(String deliveryAddress) {
+        this.deliveryAddress = deliveryAddress;
+    }
+
+    public OrderItem getOrderItem() {
+        return orderItem;
+    }
+
+    public void setOrderItem(OrderItem orderItem) {
+        this.orderItem = orderItem;
+    }
+
+    public OrderStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(OrderStatus status) {
+        this.status = status;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    @Nullable public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+}

@@ -1,0 +1,51 @@
+<div id="cart" hx-swap-oob="true">
+
+    <!-- Empty state -->
+    <div th:if="${cart.item == null}" class="cart-empty">
+        <i class="fa-solid fa-cart-shopping"></i>
+        <h4>Your cart is empty</h4>
+        <p class="text-muted">Looks like you haven't added anything yet.</p>
+        <a href="/" class="btn btn-buy px-4 mt-1">Continue Shopping</a>
+    </div>
+
+    <!-- Cart with item -->
+    <div th:if="${cart.item != null}" class="cart-card">
+        <table class="table cart-table mb-0">
+            <thead>
+            <tr>
+                <th>Product</th>
+                <th class="text-end">Price</th>
+                <th class="text-center">Quantity</th>
+                <th class="text-end">Subtotal</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <td class="cart-product-name fw-semibold">[[${cart.item.name}]]</td>
+                <td class="text-end text-muted">$[[${cart.item.price}]]</td>
+                <td class="text-center">
+                    <form th:action="@{/update-cart}" th:method="post">
+                        <input type="hidden" name="code" th:value="${cart.item.code}"/>
+                        <input type="number" min="0"
+                               class="cart-qty-input"
+                               name="quantity"
+                               th:value="${cart.item.quantity}"
+                               hx-post="/update-cart"
+                               hx-params="code,quantity,_csrf"
+                               hx-swap="none"
+                        />
+                    </form>
+                </td>
+                <td class="text-end fw-semibold">$[[${cart.item.quantity * cart.item.price}]]</td>
+            </tr>
+            </tbody>
+            <tfoot>
+            <tr class="cart-total-row">
+                <td colspan="3" class="text-end text-muted">Order Total</td>
+                <td class="text-end cart-total-amount">$[[${cart.totalAmount}]]</td>
+            </tr>
+            </tfoot>
+        </table>
+    </div>
+
+</div>
