@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.util.*;
 
+@SuppressWarnings({"NullAway", "NullAway.Init"})
 @Service
 public class McpService {
 

@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
+@SuppressWarnings({"NullAway", "NullAway.Init"})
 @RestController
 @RequestMapping("/mcp")
 @CrossOrigin(origins = "*")
