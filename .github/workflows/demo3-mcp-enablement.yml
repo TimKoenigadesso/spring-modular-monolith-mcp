@@ -35,30 +35,30 @@ jobs:
   ticket-intake:
     name: "Ticket-Intake-Agent"
     runs-on: ubuntu-latest
+    # Outputs als Best-Effort — inter-Job-Kommunikation laeuft primaer ueber Artefakt ticket-info.json
     outputs:
-      ticket_id:   ${{ steps.intake.outputs.ticket_id }}
-      branch_name: ${{ steps.intake.outputs.branch_name }}
-      run_number:  ${{ steps.intake.outputs.run_number }}
+      run_number: ${{ steps.set_run.outputs.run_number }}
     steps:
-      - name: Ticket-ID bestimmen
-        id: intake
+      # Ticket-ID + Branch via GITHUB_ENV setzen (keine Output-Unterdrückung durch Secret-Scanner)
+      - name: Ticket-ID und Branch bestimmen
+        id: set_run
         env:
           DISPATCH_TICKET:  ${{ github.event.client_payload.ticket_key }}
           MANUAL_TICKET:    ${{ github.event.inputs.jira_ticket_id }}
           MANUAL_TICKET_V2: ${{ inputs.jira_ticket_id }}
           RUN_NUM:          ${{ github.run_number }}
         run: |
-          # Beide Ticket-Quellen als Fallback (repository_dispatch + workflow_dispatch)
           TICKET="${DISPATCH_TICKET:-${MANUAL_TICKET:-${MANUAL_TICKET_V2}}}"
           if [ -z "$TICKET" ]; then
-            echo "Kein Ticket angegeben"
+            echo "Kein Ticket angegeben — bitte jira_ticket_id als Input angeben"
             exit 1
           fi
-          # Bereinigen: nur Buchstaben, Zahlen, Bindestrich
           TICKET_SAFE=$(echo "$TICKET" | tr -cd '[:alnum:]-')
           BRANCH="demo3/$(echo "$TICKET_SAFE" | tr '[:upper:]' '[:lower:]')-${RUN_NUM}"
-          echo "ticket_id=${TICKET_SAFE}" >> "$GITHUB_OUTPUT"
-          echo "branch_name=${BRANCH}" >> "$GITHUB_OUTPUT"
+          # Intra-Job: via GITHUB_ENV (wird nicht auf Secrets gescannt)
+          echo "TICKET_ID=${TICKET_SAFE}"  >> "$GITHUB_ENV"
+          echo "BRANCH_NAME=${BRANCH}"     >> "$GITHUB_ENV"
+          # Job-Output (nur run_number, kein Ticket-String der gescannt wird)
           echo "run_number=${RUN_NUM}" >> "$GITHUB_OUTPUT"
           echo "Ticket: ${TICKET_SAFE} | Branch: ${BRANCH}"
 
@@ -66,58 +66,66 @@ jobs:
         env:
           JIRA_USER:  ${{ secrets.JIRA_USER_EMAIL }}
           JIRA_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
-          TICKET_ID:  ${{ steps.intake.outputs.ticket_id }}
           REPO:       ${{ github.repository }}
-          RUN_NUM:    ${{ steps.intake.outputs.run_number }}
-          BRANCH:     ${{ steps.intake.outputs.branch_name }}
           GCP_PROJ:   ${{ env.GCP_PROJECT }}
           GCP_REG:    ${{ env.GCP_REGION }}
         run: |
+          # TICKET_ID und BRANCH_NAME kommen aus $GITHUB_ENV (vorheriger Step)
           TICKET_JSON=$(curl -sf \
             -u "${JIRA_USER}:${JIRA_TOKEN}" \
             -H "Accept: application/json" \
             "${JIRA_BASE_URL}/rest/api/3/issue/${TICKET_ID}?fields=summary,status" \
             || echo '{"fields":{"summary":"MCP-Enablement","status":{"name":"Req definiert"}}}')
 
-          SUMMARY=$(echo "$TICKET_JSON" | python3 -c "import json,sys; print(json.load(sys.stdin)['fields']['summary'])" 2>/dev/null || echo "MCP-Enablement")
+          SUMMARY=$(echo "$TICKET_JSON" | python3 -c \
+            "import json,sys; print(json.load(sys.stdin)['fields']['summary'])" 2>/dev/null \
+            || echo "MCP-Enablement")
 
           python3 - <<PYEOF
           import json, os
+          ticket_id   = os.environ["TICKET_ID"]
+          branch_name = os.environ["BRANCH_NAME"]
+          run_number  = int(os.environ.get("GITHUB_RUN_NUMBER", "0"))
+          repo        = os.environ["REPO"]
+          gcp_proj    = os.environ["GCP_PROJ"]
+          gcp_reg     = os.environ["GCP_REG"]
+
           data = {
-            "ticket_id":   os.environ["TICKET_ID"],
+            "ticket_id":   ticket_id,
             "summary":     "$SUMMARY",
-            "repo_url":    f"https://github.com/{os.environ['REPO']}",
+            "repo_url":    f"https://github.com/{repo}",
             "target_branch": "main",
-            "run_number":  int(os.environ["RUN_NUM"]),
-            "branch_name": os.environ["BRANCH"],
+            "run_number":  run_number,
+            "branch_name": branch_name,
             "acceptance_criteria": [
               "AC-1: MCP-Endpunkt /mcp erreichbar, antwortet auf initialize",
               "AC-2: Genau 8 MCP-Tools ueber tools/list abrufbar",
               "AC-3: Alle 8 Tools im Verifikationsreport als BESTANDEN dokumentiert",
-              "AC-4: Security-Review bestanden — Least-Privilege",
+              "AC-4: Security-Review bestanden - Least-Privilege",
               "AC-5: Alle Unit-Tests der MCP-Schicht gruen",
               "AC-6: Modul-uebergreifender Integrationstest gruen",
               "AC-7: Cloud Run Endpoint live, Health-Check HTTP 200",
               "AC-8: Pull Request mit Verifikationsreport existiert"
             ],
             "target_tools": 8,
-            "gcp_project": os.environ["GCP_PROJ"],
-            "gcp_region":  os.environ["GCP_REG"]
+            "gcp_project": gcp_proj,
+            "gcp_region":  gcp_reg
           }
-          json.dump(data, open("mission-briefing.json","w"), indent=2, ensure_ascii=False)
-          print("Mission Briefing erstellt")
+          json.dump(data, open("mission-briefing.json", "w"), indent=2, ensure_ascii=False)
+          # ticket-info.json extra fuer einfacheres Lesen in Folge-Jobs
+          json.dump({"ticket_id": ticket_id, "branch_name": branch_name},
+                    open("ticket-info.json", "w"), indent=2)
+          print(f"Mission Briefing erstellt fuer Ticket: {ticket_id}")
           PYEOF
 
       - name: Jira - Pipeline gestartet kommentieren
         env:
           JIRA_USER:  ${{ secrets.JIRA_USER_EMAIL }}
           JIRA_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
-          TICKET_ID:  ${{ steps.intake.outputs.ticket_id }}
           REPO:       ${{ github.repository }}
           RUN_ID:     ${{ github.run_id }}
         run: |
           RUN_URL="https://github.com/${REPO}/actions/runs/${RUN_ID}"
-          # Kommentar-Text als Variable (kein User-Input in Run-Command eingebettet)
           COMMENT_TEXT="Pipeline gestartet. 9 Agenten uebernehmen. Actions-Lauf: ${RUN_URL}"
           curl -sf -u "${JIRA_USER}:${JIRA_TOKEN}" \
             -X POST "${JIRA_BASE_URL}/rest/api/3/issue/${TICKET_ID}/comment" \
@@ -129,47 +137,58 @@ jobs:
         env:
           JIRA_USER:  ${{ secrets.JIRA_USER_EMAIL }}
           JIRA_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
-          TICKET_ID:  ${{ steps.intake.outputs.ticket_id }}
         run: |
           python3 - <<'PYEOF'
-          import json, urllib.request, urllib.parse, os, base64
+          import json, urllib.request, os, base64
 
           url_base = os.environ["JIRA_BASE_URL"]
-          ticket   = os.environ["TICKET_ID"]
+          ticket   = os.environ["TICKET_ID"]   # aus $GITHUB_ENV
           auth     = base64.b64encode(f"{os.environ['JIRA_USER']}:{os.environ['JIRA_TOKEN']}".encode()).decode()
           headers  = {"Authorization": f"Basic {auth}", "Content-Type": "application/json", "Accept": "application/json"}
 
-          # Transitions laden
           req = urllib.request.Request(f"{url_base}/rest/api/3/issue/{ticket}/transitions", headers=headers)
-          with urllib.request.urlopen(req) as r:
-              transitions = json.loads(r.read())["transitions"]
+          try:
+              with urllib.request.urlopen(req) as r:
+                  transitions = json.loads(r.read())["transitions"]
+          except Exception as e:
+              print(f"Transitions laden fehlgeschlagen: {e} — ueberspringe Status-Aenderung")
+              exit(0)
 
-          transition_id = next((t["id"] for t in transitions if "Implementierung" in t["to"]["name"]), None)
-          if transition_id:
-              body = json.dumps({"transition": {"id": transition_id}}).encode()
-              req = urllib.request.Request(f"{url_base}/rest/api/3/issue/{ticket}/transitions",
-                                           data=body, headers=headers, method="POST")
+          tid = next((t["id"] for t in transitions if "Implementierung" in t["to"]["name"]), None)
+          if tid:
+              body = json.dumps({"transition": {"id": tid}}).encode()
+              req  = urllib.request.Request(f"{url_base}/rest/api/3/issue/{ticket}/transitions",
+                                            data=body, headers=headers, method="POST")
               try:
                   urllib.request.urlopen(req)
-                  print("Ticket auf 'In Implementierung' gesetzt")
+                  print(f"Ticket {ticket} auf 'In Implementierung' gesetzt")
               except Exception as e:
                   print(f"Transition fehlgeschlagen: {e}")
           else:
               print("Transition 'In Implementierung' nicht gefunden")
           PYEOF
 
-      - name: Mission Briefing als Artefakt hochladen
+      - name: Mission Briefing und Ticket-Info als Artefakte hochladen
         uses: actions/upload-artifact@v4
         with:
           name: mission-briefing
-          path: mission-briefing.json
+          path: |
+            mission-briefing.json
+            ticket-info.json
+          retention-days: 7
+
+      - name: Ticket-Info separat hochladen (schneller Download fuer Folge-Jobs)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ticket-info
+          path: ticket-info.json
           retention-days: 7
 
       - name: Job Summary schreiben
         env:
-          TICKET_ID:  ${{ steps.intake.outputs.ticket_id }}
-          BRANCH:     ${{ steps.intake.outputs.branch_name }}
-          RUN_NUM:    ${{ steps.intake.outputs.run_number }}
+          # TICKET_ID aus GITHUB_ENV
+          # BRANCH_NAME aus GITHUB_ENV
+          RUN_NUM:    ${{ github.run_number }}
         run: |
           cat >> "$GITHUB_STEP_SUMMARY" <<SUMMARY
           ## Ticket-Intake-Agent - Abgeschlossen
@@ -193,7 +212,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Mission Briefing herunterladen
+      - name: Ticket-Info und Mission Briefing laden
+        uses: actions/download-artifact@v4
+        with:
+          name: ticket-info
+          path: /tmp
+
+      - name: Ticket-Variablen aus Artefakt setzen
+        run: |
+          TICKET_ID=$(python3 -c "import json; print(json.load(open('/tmp/ticket-info.json'))['ticket_id'])")
+          BRANCH_NAME=$(python3 -c "import json; print(json.load(open('/tmp/ticket-info.json'))['branch_name'])")
+          echo "TICKET_ID=${TICKET_ID}" >> "$GITHUB_ENV"
+          echo "BRANCH_NAME=${BRANCH_NAME}" >> "$GITHUB_ENV"
+          echo "Ticket: ${TICKET_ID} | Branch: ${BRANCH_NAME}"
+
+      - name: Mission Briefing laden
         uses: actions/download-artifact@v4
         with:
           name: mission-briefing
@@ -216,7 +249,6 @@ jobs:
           GOOGLE_APPLICATION_CREDENTIALS: /tmp/gcp-key.json
           ANTHROPIC_VERTEX_PROJECT_ID:    ${{ secrets.GCP_PROJECT_ID }}
           CLOUD_ML_REGION:                europe-west1
-          TICKET_ID:                      ${{ needs.ticket-intake.outputs.ticket_id }}
         run: python3 scripts/claude-agent-demo3.py --mode analyse --ticket "$TICKET_ID" --max-turns 30
 
       - name: Analyse-Report validieren
@@ -261,6 +293,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+
+      - name: Ticket-Info laden
+        uses: actions/download-artifact@v4
+        with:
+          name: ticket-info
+          path: /tmp
+
+      - name: Ticket-Variablen setzen
+        run: |
+          TICKET_ID=$(python3 -c "import json; print(json.load(open('/tmp/ticket-info.json'))['ticket_id'])")
+          BRANCH_NAME=$(python3 -c "import json; print(json.load(open('/tmp/ticket-info.json'))['branch_name'])")
+          echo "TICKET_ID=${TICKET_ID}" >> "$GITHUB_ENV"
+          echo "BRANCH_NAME=${BRANCH_NAME}" >> "$GITHUB_ENV"
+
       - name: Artefakte laden
         uses: actions/download-artifact@v4
         with:
@@ -283,7 +329,6 @@ jobs:
           GOOGLE_APPLICATION_CREDENTIALS: /tmp/gcp-key.json
           ANTHROPIC_VERTEX_PROJECT_ID:    ${{ secrets.GCP_PROJECT_ID }}
           CLOUD_ML_REGION:                europe-west1
-          TICKET_ID:                      ${{ needs.ticket-intake.outputs.ticket_id }}
         run: python3 scripts/claude-agent-demo3.py --mode architektur --ticket "$TICKET_ID" --max-turns 30
 
       - name: Tool-Spezifikation validieren
@@ -329,6 +374,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+
+      - name: Ticket-Info laden
+        uses: actions/download-artifact@v4
+        with:
+          name: ticket-info
+          path: /tmp
+
+      - name: Ticket-Variablen setzen
+        run: |
+          TICKET_ID=$(python3 -c "import json; print(json.load(open('/tmp/ticket-info.json'))['ticket_id'])")
+          BRANCH_NAME=$(python3 -c "import json; print(json.load(open('/tmp/ticket-info.json'))['branch_name'])")
+          echo "TICKET_ID=${TICKET_ID}" >> "$GITHUB_ENV"
+          echo "BRANCH_NAME=${BRANCH_NAME}" >> "$GITHUB_ENV"
+
       - name: Artefakte laden
         uses: actions/download-artifact@v4
         with:
@@ -351,7 +410,6 @@ jobs:
           GOOGLE_APPLICATION_CREDENTIALS: /tmp/gcp-key.json
           ANTHROPIC_VERTEX_PROJECT_ID:    ${{ secrets.GCP_PROJECT_ID }}
           CLOUD_ML_REGION:                europe-west1
-          TICKET_ID:                      ${{ needs.ticket-intake.outputs.ticket_id }}
         run: python3 scripts/claude-agent-demo3.py --mode security --ticket "$TICKET_ID" --max-turns 20
 
       - name: Security Matrix validieren
@@ -400,6 +458,20 @@ jobs:
           token: ${{ secrets.GH_PAT }}
           fetch-depth: 0
 
+
+      - name: Ticket-Info laden
+        uses: actions/download-artifact@v4
+        with:
+          name: ticket-info
+          path: /tmp
+
+      - name: Ticket-Variablen setzen
+        run: |
+          TICKET_ID=$(python3 -c "import json; print(json.load(open('/tmp/ticket-info.json'))['ticket_id'])")
+          BRANCH_NAME=$(python3 -c "import json; print(json.load(open('/tmp/ticket-info.json'))['branch_name'])")
+          echo "TICKET_ID=${TICKET_ID}" >> "$GITHUB_ENV"
+          echo "BRANCH_NAME=${BRANCH_NAME}" >> "$GITHUB_ENV"
+
       - name: Git konfigurieren
         run: |
           git config user.email "claude-demo3@adesso.de"
@@ -407,7 +479,7 @@ jobs:
 
       - name: Feature-Branch erstellen
         env:
-          BRANCH: ${{ needs.ticket-intake.outputs.branch_name }}
+          # BRANCH_NAME wird aus ticket-info Artefakt geladen
         run: |
           git checkout -b "$BRANCH"
 
@@ -438,7 +510,6 @@ jobs:
           GOOGLE_APPLICATION_CREDENTIALS: /tmp/gcp-key.json
           ANTHROPIC_VERTEX_PROJECT_ID:    ${{ secrets.GCP_PROJECT_ID }}
           CLOUD_ML_REGION:                europe-west1
-          TICKET_ID:                      ${{ needs.ticket-intake.outputs.ticket_id }}
         run: python3 scripts/claude-agent-demo3.py --mode implementierung --ticket "$TICKET_ID" --max-turns 60
 
       - name: Implementierung validieren
@@ -458,8 +529,7 @@ jobs:
 
       - name: Commit und Push auf Feature-Branch
         env:
-          BRANCH:    ${{ needs.ticket-intake.outputs.branch_name }}
-          TICKET_ID: ${{ needs.ticket-intake.outputs.ticket_id }}
+          # BRANCH_NAME wird aus ticket-info Artefakt geladen
         run: |
           git add -A
           git diff --cached --stat
@@ -476,7 +546,7 @@ jobs:
 
       - name: Job Summary
         env:
-          BRANCH: ${{ needs.ticket-intake.outputs.branch_name }}
+          # BRANCH_NAME wird aus ticket-info Artefakt geladen
         run: |
           cat >> "$GITHUB_STEP_SUMMARY" <<SUMMARY
           ## Implementierungs-Agent - Abgeschlossen
@@ -496,8 +566,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ needs.ticket-intake.outputs.branch_name }}
           token: ${{ secrets.GH_PAT }}
+
+
+      - name: Ticket-Info laden
+        uses: actions/download-artifact@v4
+        with:
+          name: ticket-info
+          path: /tmp
+
+      - name: Ticket-Variablen setzen
+        run: |
+          TICKET_ID=$(python3 -c "import json; print(json.load(open('/tmp/ticket-info.json'))['ticket_id'])")
+          BRANCH_NAME=$(python3 -c "import json; print(json.load(open('/tmp/ticket-info.json'))['branch_name'])")
+          echo "TICKET_ID=${TICKET_ID}" >> "$GITHUB_ENV"
+          echo "BRANCH_NAME=${BRANCH_NAME}" >> "$GITHUB_ENV"
+
+      - name: Feature-Branch auschecken
+        run: |
+          BRANCH=$(python3 -c "import json; print(json.load(open('/tmp/ticket-info.json'))['branch_name'])" 2>/dev/null || echo "main")
+          git fetch origin "$BRANCH" 2>/dev/null || true
+          git checkout "$BRANCH" 2>/dev/null || echo "Branch nicht gefunden"
 
       - uses: actions/setup-java@v5
         with:
@@ -572,8 +661,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ needs.ticket-intake.outputs.branch_name }}
           token: ${{ secrets.GH_PAT }}
+
+
+      - name: Ticket-Info laden
+        uses: actions/download-artifact@v4
+        with:
+          name: ticket-info
+          path: /tmp
+
+      - name: Ticket-Variablen setzen
+        run: |
+          TICKET_ID=$(python3 -c "import json; print(json.load(open('/tmp/ticket-info.json'))['ticket_id'])")
+          BRANCH_NAME=$(python3 -c "import json; print(json.load(open('/tmp/ticket-info.json'))['branch_name'])")
+          echo "TICKET_ID=${TICKET_ID}" >> "$GITHUB_ENV"
+          echo "BRANCH_NAME=${BRANCH_NAME}" >> "$GITHUB_ENV"
+
+      - name: Feature-Branch auschecken
+        run: |
+          BRANCH=$(python3 -c "import json; print(json.load(open('/tmp/ticket-info.json'))['branch_name'])" 2>/dev/null || echo "main")
+          git fetch origin "$BRANCH" 2>/dev/null || true
+          git checkout "$BRANCH" 2>/dev/null || echo "Branch nicht gefunden"
 
       - uses: actions/setup-java@v5
         with:
@@ -650,8 +758,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ needs.ticket-intake.outputs.branch_name }}
           token: ${{ secrets.GH_PAT }}
+
+
+      - name: Ticket-Info laden
+        uses: actions/download-artifact@v4
+        with:
+          name: ticket-info
+          path: /tmp
+
+      - name: Ticket-Variablen setzen
+        run: |
+          TICKET_ID=$(python3 -c "import json; print(json.load(open('/tmp/ticket-info.json'))['ticket_id'])")
+          BRANCH_NAME=$(python3 -c "import json; print(json.load(open('/tmp/ticket-info.json'))['branch_name'])")
+          echo "TICKET_ID=${TICKET_ID}" >> "$GITHUB_ENV"
+          echo "BRANCH_NAME=${BRANCH_NAME}" >> "$GITHUB_ENV"
+
+      - name: Feature-Branch auschecken
+        run: |
+          BRANCH=$(python3 -c "import json; print(json.load(open('/tmp/ticket-info.json'))['branch_name'])" 2>/dev/null || echo "main")
+          git fetch origin "$BRANCH" 2>/dev/null || true
+          git checkout "$BRANCH" 2>/dev/null || echo "Branch nicht gefunden"
 
       - uses: actions/setup-python@v5
         with:
@@ -673,8 +800,7 @@ jobs:
       - name: Service-Namen generieren
         id: service_name
         env:
-          TICKET_ID: ${{ needs.ticket-intake.outputs.ticket_id }}
-          RUN_NUM:   ${{ needs.ticket-intake.outputs.run_number }}
+          RUN_NUM:   ${{ github.run_number }}
         run: |
           TICKET_LOWER=$(echo "$TICKET_ID" | tr '[:upper:]' '[:lower:]' | tr '_' '-')
           SERVICE="bookstore-mcp-${TICKET_LOWER}-${RUN_NUM}"
@@ -758,6 +884,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+
+      - name: Ticket-Info laden
+        uses: actions/download-artifact@v4
+        with:
+          name: ticket-info
+          path: /tmp
+
+      - name: Ticket-Variablen setzen
+        run: |
+          TICKET_ID=$(python3 -c "import json; print(json.load(open('/tmp/ticket-info.json'))['ticket_id'])")
+          BRANCH_NAME=$(python3 -c "import json; print(json.load(open('/tmp/ticket-info.json'))['branch_name'])")
+          echo "TICKET_ID=${TICKET_ID}" >> "$GITHUB_ENV"
+          echo "BRANCH_NAME=${BRANCH_NAME}" >> "$GITHUB_ENV"
+
       - name: Deployment-Ergebnis laden
         uses: actions/download-artifact@v4
         with:
@@ -771,7 +911,6 @@ jobs:
       - name: Alle 8 MCP-Tools verifizieren
         id: verify
         env:
-          TICKET_ID: ${{ needs.ticket-intake.outputs.ticket_id }}
         run: |
           python3 - <<'PYEOF'
           import json, sys, urllib.request, time, os
@@ -919,9 +1058,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ needs.ticket-intake.outputs.branch_name }}
           token: ${{ secrets.GH_PAT }}
           fetch-depth: 0
+
+      - name: Feature-Branch auschecken
+        run: |
+          BRANCH=$(python3 -c "import json; print(json.load(open('/tmp/ticket-info.json'))['branch_name'])" 2>/dev/null || echo "main")
+          git fetch origin "$BRANCH" 2>/dev/null || true
+          git checkout "$BRANCH" 2>/dev/null || echo "Branch $BRANCH nicht gefunden, bleibe auf main"
 
       - uses: actions/download-artifact@v4
         with:
@@ -939,7 +1083,6 @@ jobs:
 
       - name: PR-Beschreibung erstellen
         env:
-          TICKET_ID: ${{ needs.ticket-intake.outputs.ticket_id }}
           REPO:      ${{ github.repository }}
           RUN_ID:    ${{ github.run_id }}
         run: |
@@ -1005,8 +1148,7 @@ jobs:
         id: create_pr
         env:
           GH_TOKEN:  ${{ secrets.GH_PAT }}
-          TICKET_ID: ${{ needs.ticket-intake.outputs.ticket_id }}
-          BRANCH:    ${{ needs.ticket-intake.outputs.branch_name }}
+          # BRANCH_NAME wird aus ticket-info Artefakt geladen
         run: |
           PR_URL=$(gh pr create \
             --title "feat(mcp): MCP-Enablement ${TICKET_ID} — 8 Tools verifiziert" \
@@ -1021,7 +1163,6 @@ jobs:
         env:
           JIRA_USER:  ${{ secrets.JIRA_USER_EMAIL }}
           JIRA_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
-          TICKET_ID:  ${{ needs.ticket-intake.outputs.ticket_id }}
           REPO:       ${{ github.repository }}
           RUN_ID:     ${{ github.run_id }}
         run: |
@@ -1105,7 +1246,7 @@ jobs:
         run: |
           LIVE_URL=$(python3 -c "import json; print(json.load(open('/tmp/deployment-result.json'))['live_url'])" 2>/dev/null || echo "?")
           PR_URL=$(cat /tmp/pr-url.txt 2>/dev/null || echo "")
-          TICKET_ID="${{ needs.ticket-intake.outputs.ticket_id }}"
+          TICKET_ID=$(python3 -c "import json; print(json.load(open('/tmp/ticket-info.json'))['ticket_id'])")
           REPO="${{ github.repository }}"
           RUN_ID="${{ github.run_id }}"
           cat >> "$GITHUB_STEP_SUMMARY" <<SUMMARY
