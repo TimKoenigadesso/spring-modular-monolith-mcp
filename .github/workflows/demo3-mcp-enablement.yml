@@ -242,7 +242,10 @@ jobs:
       - name: GCP Auth
         env:
           GCP_KEY: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
-        run: echo "$GCP_KEY" | base64 -d > /tmp/gcp-key.json
+        run: |
+          echo "$GCP_KEY" | base64 -d > /tmp/gcp-key.json
+          python3 -c "import json; d=json.load(open('/tmp/gcp-key.json')); print('SA:', d['client_email'])"
+          gcloud auth activate-service-account --key-file=/tmp/gcp-key.json --quiet 2>/dev/null || true
 
       - name: Claude Agent - Code-Analyse
         env:
@@ -322,7 +325,10 @@ jobs:
       - name: GCP Auth
         env:
           GCP_KEY: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
-        run: echo "$GCP_KEY" | base64 -d > /tmp/gcp-key.json
+        run: |
+          echo "$GCP_KEY" | base64 -d > /tmp/gcp-key.json
+          python3 -c "import json; d=json.load(open('/tmp/gcp-key.json')); print('SA:', d['client_email'])"
+          gcloud auth activate-service-account --key-file=/tmp/gcp-key.json --quiet 2>/dev/null || true
 
       - name: Claude Agent - Architektur-Design
         env:
@@ -403,7 +409,10 @@ jobs:
       - name: GCP Auth
         env:
           GCP_KEY: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
-        run: echo "$GCP_KEY" | base64 -d > /tmp/gcp-key.json
+        run: |
+          echo "$GCP_KEY" | base64 -d > /tmp/gcp-key.json
+          python3 -c "import json; d=json.load(open('/tmp/gcp-key.json')); print('SA:', d['client_email'])"
+          gcloud auth activate-service-account --key-file=/tmp/gcp-key.json --quiet 2>/dev/null || true
 
       - name: Claude Agent - Security Review
         env:
@@ -501,7 +510,10 @@ jobs:
       - name: GCP Auth
         env:
           GCP_KEY: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
-        run: echo "$GCP_KEY" | base64 -d > /tmp/gcp-key.json
+        run: |
+          echo "$GCP_KEY" | base64 -d > /tmp/gcp-key.json
+          python3 -c "import json; d=json.load(open('/tmp/gcp-key.json')); print('SA:', d['client_email'])"
+          gcloud auth activate-service-account --key-file=/tmp/gcp-key.json --quiet 2>/dev/null || true
 
       - name: Claude Agent - MCP-Layer implementieren
         env:
