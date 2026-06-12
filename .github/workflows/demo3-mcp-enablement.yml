@@ -873,24 +873,33 @@ jobs:
         run: |
           gcloud auth configure-docker europe-west3-docker.pkg.dev --quiet
 
-      - name: Build und Deploy via Jib (ohne Cloud Build)
+      - name: Build und Deploy via Docker (Dockerfile)
         id: do_deploy
         env:
           SERVICE_NAME: ${{ steps.service_name.outputs.service_name }}
           REGISTRY:     europe-west3-docker.pkg.dev/adesso-genai-solunit-demo/aeh-services
         run: |
           IMAGE="${REGISTRY}/${SERVICE_NAME}:latest"
-          echo "Baue Image: $IMAGE"
-          chmod +x mvnw
-
-          # Jib baut direkt in die Artifact Registry (kein Docker-Daemon noetig)
-          ./mvnw -ntp compile jib:build             -DJIB_IMAGE="$IMAGE"             -Djib.from.image=eclipse-temurin:25-jre             -DskipTests             -Dmaven.test.skip=true             2>&1 | tail -40
-
+          echo "Baue Docker-Image: $IMAGE"
+          docker build --no-cache -t "$IMAGE" . 2>&1
+          if [ $? -ne 0 ]; then echo "Docker Build fehlgeschlagen"; exit 1; fi
+          echo "Pushe Image..."
+          docker push "$IMAGE"
           echo "Deploy auf Cloud Run..."
-          gcloud run deploy "$SERVICE_NAME"             --image "$IMAGE"             --region europe-west3             --project adesso-genai-solunit-demo             --allow-unauthenticated             --min-instances 0             --max-instances 2             --memory 2Gi             --cpu 2             --set-env-vars "SPRING_PROFILES_ACTIVE=cloud-run,SPRING_DATASOURCE_URL=jdbc:postgresql://127.0.0.1:5432/bookstore,SPRING_DATASOURCE_USERNAME=bookstore,SPRING_DATASOURCE_PASSWORD=bookstore,OTEL_SDK_DISABLED=true"             --quiet 2>&1 | tail -10
-
-          LIVE_URL=$(gcloud run services describe "$SERVICE_NAME"             --region europe-west3 --project adesso-genai-solunit-demo             --format "value(status.url)" 2>/dev/null)
-
+          gcloud run deploy "$SERVICE_NAME" \
+            --image "$IMAGE" \
+            --region europe-west3 \
+            --project adesso-genai-solunit-demo \
+            --allow-unauthenticated \
+            --min-instances 0 \
+            --max-instances 2 \
+            --memory 2Gi \
+            --cpu 2 \
+            --set-env-vars "SPRING_PROFILES_ACTIVE=cloud-run,SPRING_DATASOURCE_URL=jdbc:postgresql://127.0.0.1:5432/bookstore,SPRING_DATASOURCE_USERNAME=bookstore,SPRING_DATASOURCE_PASSWORD=bookstore,OTEL_SDK_DISABLED=true" \
+            --quiet
+          LIVE_URL=$(gcloud run services describe "$SERVICE_NAME" \
+            --region europe-west3 --project adesso-genai-solunit-demo \
+            --format "value(status.url)" 2>/dev/null)
           echo "live_url=$LIVE_URL" >> "$GITHUB_OUTPUT"
           echo "$LIVE_URL" > .mcp-endpoint
           echo "Live-URL: $LIVE_URL"
