@@ -28,9 +28,15 @@ public class McpController {
         consumes = MediaType.APPLICATION_JSON_VALUE,
         produces = MediaType.APPLICATION_JSON_VALUE
     )
-    public ResponseEntity<Map<String, Object>> handle(@RequestBody Map<String, Object> req) {
+    public ResponseEntity<?> handle(@RequestBody Map<String, Object> req) {
         String method = (String) req.get("method");
-        Object id = req.getOrDefault("id", 1);
+
+        // JSON-RPC 2.0: Notifications haben keine 'id' → keine Antwort senden
+        if (!req.containsKey("id")) {
+            return ResponseEntity.noContent().build();
+        }
+
+        Object id = req.get("id");
 
         return switch (method) {
             case "initialize" -> ok(id, Map.of(
