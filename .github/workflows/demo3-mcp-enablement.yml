@@ -885,19 +885,25 @@ jobs:
           if [ $? -ne 0 ]; then echo "Docker Build fehlgeschlagen"; exit 1; fi
           echo "Pushe Image..."
           docker push "$IMAGE"
-          echo "Deploy auf Cloud Run..."
-          gcloud run deploy "$SERVICE_NAME" \
-            --image "$IMAGE" \
+          echo "Deploy auf Cloud Run (Multi-Container: App + Postgres)..."
+          gcloud beta run deploy "$SERVICE_NAME" \
             --region europe-west3 \
             --project adesso-genai-solunit-demo \
             --allow-unauthenticated \
             --min-instances 0 \
             --max-instances 2 \
-            --memory 2Gi \
-            --cpu 2 \
-            --set-env-vars "SPRING_PROFILES_ACTIVE=cloud-run,SPRING_DATASOURCE_URL=jdbc:postgresql://127.0.0.1:5432/bookstore,SPRING_DATASOURCE_USERNAME=bookstore,SPRING_DATASOURCE_PASSWORD=bookstore,OTEL_SDK_DISABLED=true" \
+            --container app \
+              --image "$IMAGE" \
+              --set-env-vars "SPRING_PROFILES_ACTIVE=cloud-run,SPRING_DATASOURCE_URL=jdbc:postgresql://127.0.0.1:5432/bookstore,SPRING_DATASOURCE_USERNAME=bookstore,SPRING_DATASOURCE_PASSWORD=bookstore,OTEL_SDK_DISABLED=true" \
+              --port 8080 \
+              --memory 2Gi \
+              --cpu 2 \
+            --container postgres \
+              --image postgres:16-alpine \
+              --set-env-vars "POSTGRES_DB=bookstore,POSTGRES_USER=bookstore,POSTGRES_PASSWORD=bookstore" \
+              --memory 512Mi \
+              --cpu 1 \
             --quiet
-          LIVE_URL=$(gcloud run services describe "$SERVICE_NAME" \
             --region europe-west3 --project adesso-genai-solunit-demo \
             --format "value(status.url)" 2>/dev/null)
           echo "live_url=$LIVE_URL" >> "$GITHUB_OUTPUT"
