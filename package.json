@@ -1,0 +1,12 @@
+{
+  "name": "spring-modular-monolith-mcp",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Spring Modulith Bookstore + MCP-Demo für Claude Desktop",
+  "scripts": {
+    "mcp-server": "node mcp-demo2-builder.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  }
+}
