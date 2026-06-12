@@ -14,10 +14,9 @@ public class McpSecurityConfig {
 
     @Bean
     public SecurityFilterChain mcpFilterChain(HttpSecurity http) throws Exception {
-        http
-            .securityMatcher("/mcp/**", "/mcp")
-            .csrf(AbstractHttpConfigurer::disable)
-            .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
+        http.securityMatcher("/mcp/**", "/mcp")
+                .csrf(AbstractHttpConfigurer::disable)
+                .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
         return http.build();
     }
 }
