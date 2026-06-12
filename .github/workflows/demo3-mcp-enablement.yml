@@ -250,7 +250,7 @@ jobs:
       - name: Claude Agent - Code-Analyse
         env:
           GOOGLE_APPLICATION_CREDENTIALS: /tmp/gcp-key.json
-          ANTHROPIC_VERTEX_PROJECT_ID:    ${{ secrets.GCP_PROJECT_ID }}
+          ANTHROPIC_VERTEX_PROJECT_ID:    adesso-genai-solunit-demo
           CLOUD_ML_REGION:                europe-west1
         run: python3 scripts/claude-agent-demo3.py --mode analyse --ticket "$TICKET_ID" --max-turns 30
 
@@ -333,7 +333,7 @@ jobs:
       - name: Claude Agent - Architektur-Design
         env:
           GOOGLE_APPLICATION_CREDENTIALS: /tmp/gcp-key.json
-          ANTHROPIC_VERTEX_PROJECT_ID:    ${{ secrets.GCP_PROJECT_ID }}
+          ANTHROPIC_VERTEX_PROJECT_ID:    adesso-genai-solunit-demo
           CLOUD_ML_REGION:                europe-west1
         run: python3 scripts/claude-agent-demo3.py --mode architektur --ticket "$TICKET_ID" --max-turns 30
 
@@ -417,7 +417,7 @@ jobs:
       - name: Claude Agent - Security Review
         env:
           GOOGLE_APPLICATION_CREDENTIALS: /tmp/gcp-key.json
-          ANTHROPIC_VERTEX_PROJECT_ID:    ${{ secrets.GCP_PROJECT_ID }}
+          ANTHROPIC_VERTEX_PROJECT_ID:    adesso-genai-solunit-demo
           CLOUD_ML_REGION:                europe-west1
         run: python3 scripts/claude-agent-demo3.py --mode security --ticket "$TICKET_ID" --max-turns 20
 
@@ -518,7 +518,7 @@ jobs:
       - name: Claude Agent - MCP-Layer implementieren
         env:
           GOOGLE_APPLICATION_CREDENTIALS: /tmp/gcp-key.json
-          ANTHROPIC_VERTEX_PROJECT_ID:    ${{ secrets.GCP_PROJECT_ID }}
+          ANTHROPIC_VERTEX_PROJECT_ID:    adesso-genai-solunit-demo
           CLOUD_ML_REGION:                europe-west1
         run: python3 scripts/claude-agent-demo3.py --mode implementierung --ticket "$TICKET_ID" --max-turns 60
 
@@ -792,7 +792,7 @@ jobs:
 
       - uses: google-github-actions/setup-gcloud@v2
         with:
-          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          project_id: adesso-genai-solunit-demo
 
       - name: GCP Auth
         env:
