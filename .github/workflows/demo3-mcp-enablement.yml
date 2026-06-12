@@ -43,12 +43,13 @@ jobs:
       - name: Ticket-ID bestimmen
         id: intake
         env:
-          DISPATCH_TICKET: ${{ github.event.client_payload.ticket_key }}
-          MANUAL_TICKET:   ${{ inputs.jira_ticket_id }}
-          RUN_NUM:         ${{ github.run_number }}
+          DISPATCH_TICKET:  ${{ github.event.client_payload.ticket_key }}
+          MANUAL_TICKET:    ${{ github.event.inputs.jira_ticket_id }}
+          MANUAL_TICKET_V2: ${{ inputs.jira_ticket_id }}
+          RUN_NUM:          ${{ github.run_number }}
         run: |
-          # Sicher: beide Werte kommen aus vertrauenswuerdigen Quellen (workflow inputs, nicht User-Content)
-          TICKET="${DISPATCH_TICKET:-$MANUAL_TICKET}"
+          # Beide Ticket-Quellen als Fallback (repository_dispatch + workflow_dispatch)
+          TICKET="${DISPATCH_TICKET:-${MANUAL_TICKET:-${MANUAL_TICKET_V2}}}"
           if [ -z "$TICKET" ]; then
             echo "Kein Ticket angegeben"
             exit 1
