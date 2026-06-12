@@ -884,7 +884,7 @@ jobs:
           chmod +x mvnw
 
           # Jib baut direkt in die Artifact Registry (kein Docker-Daemon noetig)
-          ./mvnw -ntp compile jib:build             -DJIB_IMAGE="$IMAGE"             -DskipTests             -Dmaven.test.skip=true             2>&1 | tail -20
+          ./mvnw -ntp compile jib:build             -DJIB_IMAGE="$IMAGE"             -Djib.from.image=eclipse-temurin:25-jre             -DskipTests             -Dmaven.test.skip=true             2>&1 | tail -40
 
           echo "Deploy auf Cloud Run..."
           gcloud run deploy "$SERVICE_NAME"             --image "$IMAGE"             --region europe-west3             --project adesso-genai-solunit-demo             --allow-unauthenticated             --min-instances 0             --max-instances 2             --memory 2Gi             --cpu 2             --set-env-vars "SPRING_PROFILES_ACTIVE=cloud-run,SPRING_DATASOURCE_URL=jdbc:postgresql://127.0.0.1:5432/bookstore,SPRING_DATASOURCE_USERNAME=bookstore,SPRING_DATASOURCE_PASSWORD=bookstore,OTEL_SDK_DISABLED=true"             --quiet 2>&1 | tail -10
