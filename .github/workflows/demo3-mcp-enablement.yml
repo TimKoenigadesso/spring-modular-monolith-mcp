@@ -464,7 +464,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GH_PAT }}
           fetch-depth: 0
 
 
@@ -485,6 +484,8 @@ jobs:
         run: |
           git config user.email "claude-demo3@adesso.de"
           git config user.name "Claude Code Agent (Demo 3)"
+          # PAT fuer Push-Operationen setzen
+          git remote set-url origin "https://TimKoenigadesso:${{ secrets.GH_PAT }}@github.com/${{ github.repository }}.git"
 
       - name: Feature-Branch erstellen
         run: |
@@ -571,8 +572,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GH_PAT }}
 
 
       - name: Ticket-Info laden
@@ -666,8 +665,6 @@ jobs:
           - 5432:5432
     steps:
       - uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GH_PAT }}
 
 
       - name: Ticket-Info laden
@@ -763,8 +760,6 @@ jobs:
       service_name: ${{ steps.service_name.outputs.service_name }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GH_PAT }}
 
 
       - name: Ticket-Info laden
@@ -1063,7 +1058,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GH_PAT }}
           fetch-depth: 0
 
       - name: Feature-Branch auschecken
