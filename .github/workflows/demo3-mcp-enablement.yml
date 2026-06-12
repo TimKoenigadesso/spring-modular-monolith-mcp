@@ -837,6 +837,20 @@ jobs:
           echo "service_name=$SERVICE" >> "$GITHUB_OUTPUT"
           echo "Service: $SERVICE"
 
+      - uses: actions/setup-java@v5
+        with:
+          java-version: "25"
+          distribution: temurin
+          cache: maven
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-maven-
+
+      - run: chmod +x mvnw
+
       - name: Docker Auth fuer Artifact Registry
         run: |
           gcloud auth configure-docker europe-west3-docker.pkg.dev --quiet
