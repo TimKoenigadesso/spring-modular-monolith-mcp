@@ -198,7 +198,7 @@ jobs:
           | Feld | Wert |
           |------|------|
           | Ticket | ${TICKET_ID} |
-          | Branch | ${BRANCH} |
+          | Branch | ${BRANCH_NAME} |
           | Run | #${RUN_NUM} |
 
           **Uebergabe an:** Code-Analyse-Agent
@@ -478,10 +478,8 @@ jobs:
           git config user.name "Claude Code Agent (Demo 3)"
 
       - name: Feature-Branch erstellen
-        env:
-          # BRANCH_NAME wird aus ticket-info Artefakt geladen
         run: |
-          git checkout -b "$BRANCH"
+          git checkout -b "$BRANCH_NAME"
 
       - name: Artefakte laden
         uses: actions/download-artifact@v4
@@ -528,13 +526,11 @@ jobs:
           if [ "$MISSING" = "1" ]; then exit 1; fi
 
       - name: Commit und Push auf Feature-Branch
-        env:
-          # BRANCH_NAME wird aus ticket-info Artefakt geladen
         run: |
           git add -A
           git diff --cached --stat
           git commit -m "feat(mcp): MCP-Layer einbetten ${TICKET_ID}" || echo "Keine Aenderungen"
-          git push origin "$BRANCH" --force-with-lease || git push origin "$BRANCH"
+          git push origin "$BRANCH_NAME" --force-with-lease || git push origin "$BRANCH_NAME"
 
       - name: Artefakte hochladen
         uses: actions/upload-artifact@v4
@@ -545,8 +541,6 @@ jobs:
           retention-days: 7
 
       - name: Job Summary
-        env:
-          # BRANCH_NAME wird aus ticket-info Artefakt geladen
         run: |
           cat >> "$GITHUB_STEP_SUMMARY" <<SUMMARY
           ## Implementierungs-Agent - Abgeschlossen
@@ -910,7 +904,6 @@ jobs:
 
       - name: Alle 8 MCP-Tools verifizieren
         id: verify
-        env:
         run: |
           python3 - <<'PYEOF'
           import json, sys, urllib.request, time, os
