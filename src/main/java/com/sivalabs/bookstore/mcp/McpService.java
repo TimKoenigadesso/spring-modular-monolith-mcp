@@ -5,14 +5,13 @@ package com.sivalabs.bookstore.mcp;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sivalabs.bookstore.catalog.ProductApi;
 import com.sivalabs.bookstore.catalog.domain.ProductService;
+import com.sivalabs.bookstore.inventory.domain.InventoryService;
 import com.sivalabs.bookstore.orders.OrdersApi;
 import com.sivalabs.bookstore.orders.domain.OrderService;
 import com.sivalabs.bookstore.orders.domain.models.*;
-import com.sivalabs.bookstore.inventory.domain.InventoryService;
-import org.springframework.stereotype.Service;
-
 import java.math.BigDecimal;
 import java.util.*;
+import org.springframework.stereotype.Service;
 
 @SuppressWarnings({"NullAway", "NullAway.Init"})
 @Service
@@ -43,51 +42,63 @@ public class McpService {
     public List<Map<String, Object>> listTools() {
         return List.of(
 
-            // KATALOG-MODUL
-            tool("list_products",
-                "[Katalog] Listet alle Bücher seitenweise auf.",
-                Map.of("page", Map.of("type", "integer", "description", "Seitennummer (ab 1)"))),
+                // KATALOG-MODUL
+                tool(
+                        "list_products",
+                        "[Katalog] Listet alle Bücher seitenweise auf.",
+                        Map.of("page", Map.of("type", "integer", "description", "Seitennummer (ab 1)"))),
+                tool(
+                        "get_product",
+                        "[Katalog] Gibt Produktdetails (Name, Preis, Beschreibung) für einen Produktcode zurück.",
+                        Map.of("code", Map.of("type", "string", "description", "Produktcode z.B. P100"))),
 
-            tool("get_product",
-                "[Katalog] Gibt Produktdetails (Name, Preis, Beschreibung) für einen Produktcode zurück.",
-                Map.of("code", Map.of("type", "string", "description", "Produktcode z.B. P100"))),
+                // BESTELLUNGEN-MODUL
+                tool(
+                        "list_orders",
+                        "[Bestellungen] Listet alle Bestellungen. Optionaler Status-Filter: NEW, IN_PROCESS, DELIVERED, CANCELLED.",
+                        Map.of(
+                                "page", Map.of("type", "integer", "description", "Seitennummer (ab 1)"),
+                                "status",
+                                        Map.of(
+                                                "type",
+                                                "string",
+                                                "description",
+                                                "Optional: NEW | IN_PROCESS | DELIVERED | CANCELLED"))),
+                tool(
+                        "get_order",
+                        "[Bestellungen] Gibt Details einer Bestellung anhand der Bestellnummer zurück.",
+                        Map.of("orderNumber", Map.of("type", "string", "description", "Bestellnummer"))),
+                tool(
+                        "create_order",
+                        "[Bestellungen] Legt eine neue Bestellung an.",
+                        Map.of(
+                                "customerName", Map.of("type", "string"),
+                                "customerEmail", Map.of("type", "string"),
+                                "customerPhone", Map.of("type", "string"),
+                                "deliveryAddress", Map.of("type", "string"),
+                                "productCode", Map.of("type", "string", "description", "Produktcode z.B. P100"),
+                                "quantity", Map.of("type", "integer", "description", "Menge"))),
+                tool(
+                        "update_order_status",
+                        "[Bestellungen] Ändert den Status einer Bestellung. Erlaubte Übergänge: NEW→IN_PROCESS, NEW→CANCELLED, IN_PROCESS→DELIVERED, IN_PROCESS→CANCELLED.",
+                        Map.of(
+                                "orderNumber", Map.of("type", "string"),
+                                "status",
+                                        Map.of(
+                                                "type",
+                                                "string",
+                                                "description",
+                                                "NEW | IN_PROCESS | DELIVERED | CANCELLED"))),
 
-            // BESTELLUNGEN-MODUL
-            tool("list_orders",
-                "[Bestellungen] Listet alle Bestellungen. Optionaler Status-Filter: NEW, IN_PROCESS, DELIVERED, CANCELLED.",
-                Map.of(
-                    "page",   Map.of("type", "integer", "description", "Seitennummer (ab 1)"),
-                    "status", Map.of("type", "string",  "description", "Optional: NEW | IN_PROCESS | DELIVERED | CANCELLED"))),
-
-            tool("get_order",
-                "[Bestellungen] Gibt Details einer Bestellung anhand der Bestellnummer zurück.",
-                Map.of("orderNumber", Map.of("type", "string", "description", "Bestellnummer"))),
-
-            tool("create_order",
-                "[Bestellungen] Legt eine neue Bestellung an.",
-                Map.of(
-                    "customerName",     Map.of("type", "string"),
-                    "customerEmail",    Map.of("type", "string"),
-                    "customerPhone",    Map.of("type", "string"),
-                    "deliveryAddress",  Map.of("type", "string"),
-                    "productCode",      Map.of("type", "string",  "description", "Produktcode z.B. P100"),
-                    "quantity",         Map.of("type", "integer", "description", "Menge"))),
-
-            tool("update_order_status",
-                "[Bestellungen] Ändert den Status einer Bestellung. Erlaubte Übergänge: NEW→IN_PROCESS, NEW→CANCELLED, IN_PROCESS→DELIVERED, IN_PROCESS→CANCELLED.",
-                Map.of(
-                    "orderNumber", Map.of("type", "string"),
-                    "status",      Map.of("type", "string", "description", "NEW | IN_PROCESS | DELIVERED | CANCELLED"))),
-
-            // INVENTAR-MODUL
-            tool("get_stock_level",
-                "[Inventar] Gibt den aktuellen Lagerbestand für einen Produktcode zurück.",
-                Map.of("productCode", Map.of("type", "string", "description", "Produktcode"))),
-
-            tool("list_low_stock",
-                "[Inventar] Listet Artikel mit Lagerbestand ≤ threshold auf.",
-                Map.of("threshold", Map.of("type", "integer", "description", "Schwellwert (Standard: 10)")))
-        );
+                // INVENTAR-MODUL
+                tool(
+                        "get_stock_level",
+                        "[Inventar] Gibt den aktuellen Lagerbestand für einen Produktcode zurück.",
+                        Map.of("productCode", Map.of("type", "string", "description", "Produktcode"))),
+                tool(
+                        "list_low_stock",
+                        "[Inventar] Listet Artikel mit Lagerbestand ≤ threshold auf.",
+                        Map.of("threshold", Map.of("type", "integer", "description", "Schwellwert (Standard: 10)"))));
     }
 
     // ── Tool-Ausführung ────────────────────────────────────────────────────────
@@ -100,27 +111,28 @@ public class McpService {
                 int page = args.containsKey("page") ? ((Number) args.get("page")).intValue() : 1;
                 var result = productService.getProducts(page);
                 yield Map.of(
-                    "totalElements", result.totalElements(),
-                    "totalPages",    result.totalPages(),
-                    "pageNumber",    result.pageNumber(),
-                    "data", result.data().stream().map(p -> Map.of(
-                        "code",  p.code(),
-                        "name",  p.name(),
-                        "price", p.price()
-                    )).toList()
-                );
+                        "totalElements", result.totalElements(),
+                        "totalPages", result.totalPages(),
+                        "pageNumber", result.pageNumber(),
+                        "data",
+                                result.data().stream()
+                                        .map(p -> Map.of(
+                                                "code", p.code(),
+                                                "name", p.name(),
+                                                "price", p.price()))
+                                        .toList());
             }
 
             case "get_product" -> {
                 String code = (String) args.get("code");
-                yield productApi.getByCode(code)
-                    .map(p -> Map.of(
-                        "code",        p.code(),
-                        "name",        p.name(),
-                        "price",       p.price(),
-                        "description", p.description() != null ? p.description() : ""
-                    ))
-                    .orElseThrow(() -> new IllegalArgumentException("Produkt nicht gefunden: " + code));
+                yield productApi
+                        .getByCode(code)
+                        .map(p -> Map.of(
+                                "code", p.code(),
+                                "name", p.name(),
+                                "price", p.price(),
+                                "description", p.description() != null ? p.description() : ""))
+                        .orElseThrow(() -> new IllegalArgumentException("Produkt nicht gefunden: " + code));
             }
 
             // ── BESTELLUNGEN ─────────────────────────────────────────────────────
@@ -128,64 +140,65 @@ public class McpService {
                 int page = args.containsKey("page") ? ((Number) args.get("page")).intValue() : 1;
                 OrderStatus status = null;
                 if (args.containsKey("status") && args.get("status") != null) {
-                    try { status = OrderStatus.valueOf((String) args.get("status")); }
-                    catch (IllegalArgumentException ignored) {}
+                    try {
+                        status = OrderStatus.valueOf((String) args.get("status"));
+                    } catch (IllegalArgumentException ignored) {
+                    }
                 }
                 var result = orderService.getOrdersAdmin(page, status);
                 yield Map.of(
-                    "totalElements", result.totalElements(),
-                    "data", result.data().stream().map(o -> {
-                        Map<String, Object> m = new HashMap<>();
-                        m.put("orderNumber", o.orderNumber());
-                        m.put("status",      o.status().name());
-                        m.put("customer",    o.customerName());
-                        m.put("createdAt",   o.createdAt().toString());
-                        return m;
-                    }).toList()
-                );
+                        "totalElements", result.totalElements(),
+                        "data",
+                                result.data().stream()
+                                        .map(o -> {
+                                            Map<String, Object> m = new HashMap<>();
+                                            m.put("orderNumber", o.orderNumber());
+                                            m.put("status", o.status().name());
+                                            m.put("customer", o.customerName());
+                                            m.put("createdAt", o.createdAt().toString());
+                                            return m;
+                                        })
+                                        .toList());
             }
 
             case "get_order" -> {
                 String num = (String) args.get("orderNumber");
-                yield orderService.findOrderAdmin(num)
-                    .map(o -> {
-                        Map<String, Object> m = new HashMap<>();
-                        m.put("orderNumber",     o.orderNumber());
-                        m.put("status",          o.status().name());
-                        m.put("customerName",    o.customer().name());
-                        m.put("customerEmail",   o.customer().email());
-                        m.put("deliveryAddress", o.deliveryAddress());
-                        m.put("productCode",     o.item().code());
-                        m.put("productName",     o.item().name());
-                        m.put("quantity",        o.item().quantity());
-                        m.put("price",           o.item().price());
-                        return (Object) m;
-                    })
-                    .orElseThrow(() -> new IllegalArgumentException("Bestellung nicht gefunden: " + num));
+                yield orderService
+                        .findOrderAdmin(num)
+                        .map(o -> {
+                            Map<String, Object> m = new HashMap<>();
+                            m.put("orderNumber", o.orderNumber());
+                            m.put("status", o.status().name());
+                            m.put("customerName", o.customer().name());
+                            m.put("customerEmail", o.customer().email());
+                            m.put("deliveryAddress", o.deliveryAddress());
+                            m.put("productCode", o.item().code());
+                            m.put("productName", o.item().name());
+                            m.put("quantity", o.item().quantity());
+                            m.put("price", o.item().price());
+                            return (Object) m;
+                        })
+                        .orElseThrow(() -> new IllegalArgumentException("Bestellung nicht gefunden: " + num));
             }
 
             case "create_order" -> {
                 String productCode = (String) args.get("productCode");
                 int qty = ((Number) args.get("quantity")).intValue();
-                var product = productApi.getByCode(productCode)
-                    .orElseThrow(() -> new IllegalArgumentException("Produkt nicht gefunden: " + productCode));
-                var customer = new Customer(
-                    (String) args.get("customerName"),
-                    (String) args.get("customerEmail"),
-                    (String) args.get("customerPhone")
-                );
+                var product = productApi
+                        .getByCode(productCode)
+                        .orElseThrow(() -> new IllegalArgumentException("Produkt nicht gefunden: " + productCode));
+                var customer =
+                        new Customer((String) args.get("customerName"), (String) args.get("customerEmail"), (String)
+                                args.get("customerPhone"));
                 var item = new OrderItem(
-                    productCode, product.name(),
-                    product.price().multiply(BigDecimal.valueOf(qty)),
-                    qty
-                );
+                        productCode, product.name(), product.price().multiply(BigDecimal.valueOf(qty)), qty);
                 var cmd = new CreateOrderCmd(null, customer, (String) args.get("deliveryAddress"), item);
                 var result = ordersApi.createOrder(cmd);
                 yield Map.of("orderNumber", result.orderNumber(), "status", "NEW");
             }
 
             case "update_order_status" -> {
-                String num    = (String) args.get("orderNumber");
+                String num = (String) args.get("orderNumber");
                 OrderStatus ns = OrderStatus.valueOf((String) args.get("status"));
                 orderService.updateOrderStatus(num, ns);
                 yield Map.of("orderNumber", num, "newStatus", ns.name(), "updated", true);
@@ -199,15 +212,14 @@ public class McpService {
             }
 
             case "list_low_stock" -> {
-                int threshold = args.containsKey("threshold")
-                    ? ((Number) args.get("threshold")).intValue() : 10;
+                int threshold = args.containsKey("threshold") ? ((Number) args.get("threshold")).intValue() : 10;
                 var result = inventoryService.getAllInventory(1);
                 var low = result.data().stream()
-                    .filter(i -> i.quantity() <= threshold)
-                    .map(i -> Map.of(
-                        "productCode", i.productCode(),
-                        "quantity",    i.quantity()
-                    )).toList();
+                        .filter(i -> i.quantity() <= threshold)
+                        .map(i -> Map.of(
+                                "productCode", i.productCode(),
+                                "quantity", i.quantity()))
+                        .toList();
                 yield Map.of("threshold", threshold, "count", low.size(), "items", low);
             }
 
