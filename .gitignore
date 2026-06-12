@@ -40,3 +40,8 @@ out/
 .vscode/
 
 *.log
+node_modules/
+package-lock.json
+.mcp-endpoint
+**/agentic-sdlc-orchestrator/.demo3-state.json
+*.backup-*

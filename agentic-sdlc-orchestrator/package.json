@@ -1,0 +1,19 @@
+{
+  "name": "agentic-sdlc-orchestrator",
+  "version": "1.0.0",
+  "description": "Lokaler MCP-Orchestrator für Demo 3 — Agentic SDLC × Legacy-to-MCP",
+  "type": "module",
+  "main": "index.mjs",
+  "bin": {
+    "agentic-sdlc-orchestrator": "./index.mjs"
+  },
+  "scripts": {
+    "start": "node index.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

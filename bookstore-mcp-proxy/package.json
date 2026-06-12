@@ -1,0 +1,16 @@
+{
+  "name": "bookstore-mcp-proxy",
+  "version": "1.0.0",
+  "description": "Lokaler MCP-Proxy für den deployen Spring Modulith Bookstore",
+  "type": "module",
+  "main": "index.mjs",
+  "scripts": {
+    "start": "node index.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
