@@ -3,12 +3,11 @@ package com.sivalabs.bookstore.mcp;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.List;
+import java.util.Map;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
-import java.util.Map;
 
 @SuppressWarnings({"NullAway", "NullAway.Init"})
 @RestController
@@ -17,17 +16,13 @@ import java.util.Map;
 public class McpController {
 
     private final McpService mcpService;
-    private final ObjectMapper mapper = new ObjectMapper()
-        .setSerializationInclusion(JsonInclude.Include.NON_NULL);
+    private final ObjectMapper mapper = new ObjectMapper().setSerializationInclusion(JsonInclude.Include.NON_NULL);
 
     public McpController(McpService mcpService) {
         this.mcpService = mcpService;
     }
 
-    @PostMapping(
-        consumes = MediaType.APPLICATION_JSON_VALUE,
-        produces = MediaType.APPLICATION_JSON_VALUE
-    )
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> handle(@RequestBody Map<String, Object> req) {
         String method = (String) req.get("method");
 
@@ -39,15 +34,18 @@ public class McpController {
         Object id = req.get("id");
 
         return switch (method) {
-            case "initialize" -> ok(id, Map.of(
-                "protocolVersion", "2024-11-05",
-                "capabilities", Map.of("tools", Map.of()),
-                "serverInfo", Map.of(
-                    "name", "bookstore-mcp",
-                    "version", "1.0.0",
-                    "description", "Spring Modulith Bookstore — agentenfähige Modul-APIs"
-                )
-            ));
+            case "initialize" ->
+                ok(
+                        id,
+                        Map.of(
+                                "protocolVersion", "2024-11-05",
+                                "capabilities", Map.of("tools", Map.of()),
+                                "serverInfo",
+                                        Map.of(
+                                                "name", "bookstore-mcp",
+                                                "version", "1.0.0",
+                                                "description",
+                                                        "Spring Modulith Bookstore — agentenfähige Modul-APIs")));
             case "tools/list" -> ok(id, Map.of("tools", mcpService.listTools()));
             case "tools/call" -> {
                 @SuppressWarnings("unchecked")
@@ -63,15 +61,20 @@ public class McpController {
                     yield ok(id, java.util.Map.of("content", List.of(content)));
                 } catch (Exception e) {
                     java.util.Map<String, Object> err = new java.util.HashMap<>();
-                    err.put("jsonrpc", "2.0"); err.put("id", id);
+                    err.put("jsonrpc", "2.0");
+                    err.put("id", id);
                     err.put("error", java.util.Map.of("code", -32000, "message", e.getMessage()));
                     yield ResponseEntity.ok(err);
                 }
             }
-            default -> ResponseEntity.ok(Map.of(
-                "jsonrpc", "2.0", "id", id,
-                "error", Map.of("code", -32601, "message", "Method not found: " + method)
-            ));
+            default ->
+                ResponseEntity.ok(Map.of(
+                        "jsonrpc",
+                        "2.0",
+                        "id",
+                        id,
+                        "error",
+                        Map.of("code", -32601, "message", "Method not found: " + method)));
         };
     }
 
