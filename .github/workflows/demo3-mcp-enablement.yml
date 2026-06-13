@@ -886,7 +886,7 @@ jobs:
           echo "Pushe Image..."
           docker push "$IMAGE"
           echo "Deploy auf Cloud Run (Multi-Container: App + Postgres)..."
-          gcloud beta run deploy "$SERVICE_NAME" \
+          gcloud run deploy "$SERVICE_NAME" \
             --region europe-west3 \
             --project adesso-genai-solunit-demo \
             --allow-unauthenticated \
